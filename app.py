@@ -9,12 +9,7 @@ st.title("📱 AI Phân tích Vàng & Crypto")
 # =========================
 # 🟡 VÀNG
 # =========================
-def get_gold_price():
-    try:
-        url = "https://api.gold-api.com/price/XAU"
-        return requests.get(url, timeout=10).json()['price']
-    except:
-        return None
+
 
 def get_gold_history():
     try:
@@ -30,46 +25,28 @@ def get_gold_history():
 # =========================
 # 🪙 BITCOIN (FIX FULL)
 # =========================
+# =========================
+# 🪙 BITCOIN (FIX CHUẨN)
+# =========================
 def get_btc_price():
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    # Binance
     try:
-        url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?range=1d&interval=1m"
+        headers = {"User-Agent": "Mozilla/5.0"}
         data = requests.get(url, headers=headers, timeout=10).json()
-        return float(data['price'])
-    except:
-        pass
 
-    # Fallback CoinGecko
-    try:
-        url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-        data = requests.get(url, headers=headers, timeout=10).json()
-        return data['bitcoin']['usd']
+        return float(data['chart']['result'][0]['meta']['regularMarketPrice'])
     except:
         return None
 
 def get_btc_history():
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    # Binance
     try:
-        url = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=365"
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?range=1y&interval=1d"
+        headers = {"User-Agent": "Mozilla/5.0"}
         data = requests.get(url, headers=headers, timeout=10).json()
 
-        if isinstance(data, list):
-            prices = [float(item[4]) for item in data]
-            return pd.DataFrame(prices, columns=["price"])
-    except:
-        pass
-
-    # Fallback CoinGecko
-    try:
-        url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365"
-        data = requests.get(url, headers=headers, timeout=10).json()
-
-        prices = [p[1] for p in data['prices']]
-        return pd.DataFrame(prices, columns=["price"])
+        prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
+        df = pd.DataFrame(prices, columns=["price"])
+        return df.dropna()
     except:
         return None
 # =========================
