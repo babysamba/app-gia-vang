@@ -35,13 +35,11 @@ def get_gold_history():
         return None
 
 # --- LỊCH SỬ BTC ---
-def get_btc_history():
-    url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365"
+def get_btc_price():
+    url = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
     try:
         data = requests.get(url).json()
-        prices = [p[1] for p in data['prices']]
-        df = pd.DataFrame(prices, columns=["price"])
-        return df
+        return float(data['price'])
     except:
         return None
 
