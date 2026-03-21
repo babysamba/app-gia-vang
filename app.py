@@ -17,12 +17,21 @@ def get_gold_price():
 # --- LẤY DỮ LIỆU THẬT (Yahoo Finance) ---
 def get_gold_history():
     url = "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?range=3y&interval=1d"
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
     try:
-        data = requests.get(url).json()
+        response = requests.get(url, headers=headers)
+        data = response.json()
+
         prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
         df = pd.DataFrame(prices, columns=["price"])
         df = df.dropna()
+
         return df
+
     except:
         return None
 
