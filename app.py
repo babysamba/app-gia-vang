@@ -1,43 +1,37 @@
 import streamlit as st
 import pandas as pd
 import requests
-import random
 
-st.set_page_config(page_title="App Giá Vàng", layout="centered")
+st.set_page_config(page_title="App Giá Vàng PRO", layout="centered")
 
-st.title("📱 App dự đoán giá vàng")
+st.title("📱 Dự đoán giá vàng (PRO)")
 
-# --- LẤY GIÁ VÀNG THẬT ---
+# --- LẤY GIÁ VÀNG HIỆN TẠI ---
 def get_gold_price():
     url = "https://api.gold-api.com/price/XAU"
     try:
-        data = requests.get(url).json()
-        return data['price']
+        return requests.get(url).json()['price']
     except:
         return None
 
-# --- LỊCH SỬ (giả lập thông minh hơn) ---
+# --- LẤY DỮ LIỆU THẬT (Yahoo Finance) ---
 def get_gold_history():
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?range=1y&interval=1d"
     try:
-        current = get_gold_price()
-        prices = []
-
-        for i in range(365):
-            change = random.uniform(-10, 10)
-            current += change
-            prices.append(current)
-
+        data = requests.get(url).json()
+        prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
         df = pd.DataFrame(prices, columns=["price"])
+        df = df.dropna()
         return df
     except:
         return None
 
 # --- GIAO DIỆN ---
-if st.button("📥 Lấy dữ liệu & phân tích"):
+if st.button("📥 Phân tích giá vàng"):
     price = get_gold_price()
 
     if price:
-        st.success(f"💰 Giá vàng hiện tại: {price} USD/oz")
+        st.success(f"💰 Giá hiện tại: {price} USD/oz")
 
         df = get_gold_history()
 
@@ -61,15 +55,19 @@ if st.button("📥 Lấy dữ liệu & phân tích"):
             # TÍN HIỆU
             if latest['MA7'] > latest['MA30'] and rsi < 70:
                 signal = "📈 MUA"
+                note = "Xu hướng tăng, chưa quá mua"
             elif latest['MA7'] < latest['MA30'] and rsi > 30:
                 signal = "📉 BÁN"
+                note = "Xu hướng giảm"
             else:
                 signal = "⏳ CHỜ"
+                note = "Thị trường chưa rõ xu hướng"
 
             # HIỂN THỊ
             st.subheader("📊 Kết quả")
             st.write(f"Tín hiệu: {signal}")
             st.write(f"RSI: {round(rsi,2)}")
+            st.write(f"Nhận định: {note}")
 
             st.line_chart(df[['price', 'MA7', 'MA30']])
 
