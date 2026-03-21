@@ -91,7 +91,7 @@ def analyze(df):
 # =========================
 # 🔘 NÚT PHÂN TÍCH
 # =========================
-if st.button("📊 Phân tích", key="analyze_btn"):
+if analyze_btn:, key="analyze_btn"):
     df, price = get_data(symbol)
 
     if df is not None:
@@ -113,3 +113,15 @@ if st.button("📊 Phân tích", key="analyze_btn"):
 
     else:
         st.error("❌ Không lấy được dữ liệu (kiểm tra lại mã)")
+        # =========================
+# 📥 INPUT (BÊN PHẢI)
+# =========================
+st.sidebar.header("🔎 Nhập mã tài sản")
+
+symbol = st.sidebar.text_input(
+    "Ví dụ: BTC-USD, ETH-USD, GC=F",
+    value="BTC-USD",
+    key="symbol_input"
+)
+
+analyze_btn = st.sidebar.button("📊 Phân tích")
