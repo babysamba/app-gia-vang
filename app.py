@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 import requests
 
-st.set_page_config(page_title="App Giá Vàng PRO", layout="centered")
+st.set_page_config(page_title="App Vàng PRO MAX", layout="centered")
 
-st.title("📱 Dự đoán giá vàng (PRO)")
+st.title("📱 AI Dự đoán giá vàng (PRO MAX)")
 
-# --- LẤY GIÁ VÀNG HIỆN TẠI ---
+# --- LẤY GIÁ ---
 def get_gold_price():
     url = "https://api.gold-api.com/price/XAU"
     try:
@@ -14,29 +14,30 @@ def get_gold_price():
     except:
         return None
 
-# --- LẤY DỮ LIỆU THẬT (Yahoo Finance) ---
+# --- LỊCH SỬ 3 NĂM ---
 def get_gold_history():
     url = "https://query1.finance.yahoo.com/v8/finance/chart/GC=F?range=3y&interval=1d"
-
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
+    headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
-        response = requests.get(url, headers=headers)
-        data = response.json()
-
+        data = requests.get(url, headers=headers).json()
         prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
         df = pd.DataFrame(prices, columns=["price"])
         df = df.dropna()
-
         return df
-
     except:
         return None
 
-# --- GIAO DIỆN ---
-if st.button("📥 Phân tích giá vàng"):
+# --- TÍNH RSI ---
+def calculate_rsi(df):
+    delta = df['price'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+
+# --- PHÂN TÍCH ---
+if st.button("📊 Phân tích ngay"):
     price = get_gold_price()
 
     if price:
@@ -49,39 +50,61 @@ if st.button("📥 Phân tích giá vàng"):
             # MA
             df['MA7'] = df['price'].rolling(7).mean()
             df['MA30'] = df['price'].rolling(30).mean()
+            df['MA100'] = df['price'].rolling(100).mean()
 
             # RSI
-            delta = df['price'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-
-            rs = gain / loss
-            df['RSI'] = 100 - (100 / (1 + rs))
+            df['RSI'] = calculate_rsi(df)
 
             latest = df.iloc[-1]
-            rsi = latest['RSI']
 
-            # TÍN HIỆU
-            if latest['MA7'] > latest['MA30'] and rsi < 70:
-                signal = "📈 MUA"
-                note = "Xu hướng tăng, chưa quá mua"
-            elif latest['MA7'] < latest['MA30'] and rsi > 30:
-                signal = "📉 BÁN"
-                note = "Xu hướng giảm"
+            score = 50
+            notes = []
+
+            # --- CHẤM ĐIỂM ---
+            if latest['MA7'] > latest['MA30']:
+                score += 15
+                notes.append("Xu hướng ngắn hạn tăng")
             else:
-                signal = "⏳ CHỜ"
-                note = "Thị trường chưa rõ xu hướng"
+                score -= 15
+                notes.append("Xu hướng ngắn hạn giảm")
 
-            # HIỂN THỊ
+            if latest['price'] > latest['MA100']:
+                score += 10
+                notes.append("Trend dài hạn tốt")
+            else:
+                score -= 10
+                notes.append("Trend dài hạn yếu")
+
+            if latest['RSI'] < 30:
+                score += 15
+                notes.append("Quá bán (có thể bật lên)")
+            elif latest['RSI'] > 70:
+                score -= 15
+                notes.append("Quá mua (dễ giảm)")
+
+            # --- KẾT LUẬN ---
+            if score >= 70:
+                decision = "📈 NÊN MUA"
+            elif score <= 40:
+                decision = "📉 NÊN TRÁNH"
+            else:
+                decision = "⏳ NÊN CHỜ"
+
+            # --- HIỂN THỊ ---
             st.subheader("📊 Kết quả")
-            st.write(f"Tín hiệu: {signal}")
-            st.write(f"RSI: {round(rsi,2)}")
-            st.write(f"Nhận định: {note}")
 
-            st.line_chart(df[['price', 'MA7', 'MA30']])
+            st.write(f"🎯 Điểm cơ hội: {score}/100")
+            st.write(f"📌 Kết luận: {decision}")
+            st.write(f"📉 RSI: {round(latest['RSI'],2)}")
+
+            st.write("🧠 Nhận định:")
+            for n in notes:
+                st.write(f"- {n}")
+
+            st.line_chart(df[['price','MA7','MA30','MA100']])
 
         else:
-            st.error("Không lấy được dữ liệu lịch sử 😢")
+            st.error("Không lấy được dữ liệu 😢")
 
     else:
-        st.error("Không lấy được giá vàng 😢")
+        st.error("Không lấy được giá 😢")
