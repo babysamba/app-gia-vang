@@ -8,10 +8,10 @@ st.title("📱 App dự đoán giá vàng")
 
 # --- LẤY GIÁ VÀNG THẬT ---
 def get_gold_price():
-    url = "https://api.metals.live/v1/spot/gold"
+    url = "https://api.gold-api.com/price/XAU"
     try:
         data = requests.get(url).json()
-        return data[0]['price']
+        return data['price']
     except:
         return None
 
