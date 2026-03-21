@@ -72,7 +72,30 @@ def get_btc_history():
         return pd.DataFrame(prices, columns=["price"])
     except:
         return None
+# =========================
+# 🛢️ OIL (DẦU)
+# =========================
+def get_oil_price():
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/CL=F?range=1d&interval=1m"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        data = requests.get(url, headers=headers, timeout=10).json()
 
+        return float(data['chart']['result'][0]['meta']['regularMarketPrice'])
+    except:
+        return None
+
+def get_oil_history():
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/CL=F?range=1y&interval=1d"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        data = requests.get(url, headers=headers, timeout=10).json()
+
+        prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
+        df = pd.DataFrame(prices, columns=["price"])
+        return df.dropna()
+    except:
+        return None
 # =========================
 # 📊 RSI
 # =========================
@@ -174,3 +197,33 @@ if st.button("🪙 Phân tích Bitcoin"):
         st.line_chart(df[['price','MA7','MA30','MA100']])
     else:
         st.error("Lỗi dữ liệu BTC 😢")
+        # =========================
+# 🔘 OIL
+# =========================
+if st.button("🛢️ Phân tích Dầu"):
+    price = get_oil_price()
+    df = get_oil_history()
+
+    if price and df is not None:
+        st.success(f"💰 Dầu WTI: {price} USD")
+
+        df, latest, score, decision, notes = analyze(df)
+
+        st.subheader("📊 Kết quả Dầu")
+        st.write(f"🎯 Điểm: {score}/100")
+        st.write(f"📌 {decision}")
+        st.write(f"RSI: {round(latest['RSI'],2)}")
+
+        # 🔔 Cảnh báo
+        if latest['RSI'] < 30:
+            st.warning("⚠️ QUÁ BÁN (có thể bật)")
+        elif latest['RSI'] > 70:
+            st.warning("⚠️ QUÁ MUA (dễ giảm)")
+
+        for n in notes:
+            st.write(f"- {n}")
+
+        st.line_chart(df[['price','MA7','MA30','MA100']])
+
+    else:
+        st.error("Lỗi dữ liệu dầu 😢")
