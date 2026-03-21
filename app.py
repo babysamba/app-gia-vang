@@ -2,18 +2,27 @@ import streamlit as st
 import pandas as pd
 import requests
 
-st.set_page_config(page_title="AI Phân tích tài sản", layout="centered")
+st.set_page_config(page_title="AI Phân tích tài sản", layout="wide")
 
-st.title("📱 Phân tích Vàng - Crypto - Kim loại")
+st.title("📱 AI Phân tích Vàng - Crypto - Cổ phiếu")
 
 # =========================
-# 📥 INPUT
+# 📥 SIDEBAR (BÊN PHẢI)
 # =========================
-symbol = st.text_input(
-    "Nhập mã tài sản (ví dụ: BTC-USD, ETH-USD, GC=F)",
-    value="BTC-USD",
-    key="input_symbol"
+st.sidebar.header("🔎 Nhập mã tài sản")
+
+quick = st.sidebar.selectbox(
+    "⚡ Chọn nhanh",
+    ["BTC-USD", "ETH-USD", "GC=F", "SI=F", "AAPL", "TSLA"]
 )
+
+symbol_input = st.sidebar.text_input(
+    "Hoặc nhập tay (BTC-USD, GC=F...)",
+    value=quick,
+    key="symbol_input"
+)
+
+analyze_btn = st.sidebar.button("📊 Phân tích")
 
 # =========================
 # 📊 LẤY DỮ LIỆU (Yahoo)
@@ -89,39 +98,33 @@ def analyze(df):
     return df, latest, score, decision, notes
 
 # =========================
-# 🔘 NÚT PHÂN TÍCH
+# 🔘 PHÂN TÍCH
 # =========================
 if analyze_btn:
+    symbol = symbol_input.strip().upper()
+
     df, price = get_data(symbol)
 
     if df is not None:
-        st.success(f"💰 Giá hiện tại: {round(price,2)}")
+        st.success(f"💰 {symbol} hiện tại: {round(price,2)}")
 
         df, latest, score, decision, notes = analyze(df)
 
-        st.subheader("📊 Kết quả")
+        col1, col2 = st.columns(2)
 
-        st.write(f"🎯 Điểm: {score}/100")
-        st.write(f"📌 {decision}")
-        st.write(f"RSI: {round(latest['RSI'],2)}")
+        with col1:
+            st.subheader("📊 Kết quả")
+            st.write(f"🎯 Điểm: {score}/100")
+            st.write(f"📌 {decision}")
+            st.write(f"RSI: {round(latest['RSI'],2)}")
 
-        st.write("🧠 Nhận định:")
-        for n in notes:
-            st.write(f"- {n}")
+        with col2:
+            st.subheader("🧠 Nhận định")
+            for n in notes:
+                st.write(f"- {n}")
 
+        st.subheader("📈 Biểu đồ")
         st.line_chart(df[['price','MA7','MA30','MA100']])
 
     else:
-        st.error("❌ Không lấy được dữ liệu (kiểm tra lại mã)")
-        # =========================
-# 📥 INPUT (BÊN PHẢI)
-# =========================
-st.sidebar.header("🔎 Nhập mã tài sản")
-
-symbol = st.sidebar.text_input(
-    "Ví dụ: BTC-USD, ETH-USD, GC=F",
-    value="BTC-USD",
-    key="symbol_input"
-)
-
-analyze_btn = st.sidebar.button("📊 Phân tích")
+        st.error("❌ Không lấy được dữ liệu (kiểm tra mã)")
