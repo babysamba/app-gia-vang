@@ -91,7 +91,7 @@ def analyze(df):
 # =========================
 # 🔘 NÚT PHÂN TÍCH
 # =========================
-if analyze_btn:, key="analyze_btn"):
+if analyze_btn:
     df, price = get_data(symbol)
 
     if df is not None:
