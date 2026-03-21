@@ -2,30 +2,27 @@ import streamlit as st
 import pandas as pd
 import requests
 
-st.set_page_config(page_title="AI Phân tích tài sản", layout="wide")
+st.set_page_config(page_title="AI PRO MAX", layout="wide")
 
-st.title("📱 AI Phân tích Vàng - Crypto - Cổ phiếu")
+st.title("📱 AI Săn kèo Vàng - Crypto - Cổ phiếu")
 
 # =========================
-# 📥 SIDEBAR (BÊN PHẢI)
+# SIDEBAR
 # =========================
-st.sidebar.header("🔎 Nhập mã tài sản")
+st.sidebar.header("🔎 Nhập mã")
 
-quick = st.sidebar.selectbox(
-    "⚡ Chọn nhanh",
-    ["BTC-USD", "ETH-USD", "GC=F", "SI=F", "AAPL", "TSLA"]
-)
+symbol = st.sidebar.text_input("Mã chính", "BTC-USD")
+symbol2 = st.sidebar.text_input("So sánh (tùy chọn)", "ETH-USD")
 
-symbol_input = st.sidebar.text_input(
-    "Hoặc nhập tay (BTC-USD, GC=F...)",
-    value=quick,
-    key="symbol_input"
+scan_list = st.sidebar.text_input(
+    "Danh sách quét (cách nhau dấu phẩy)",
+    "BTC-USD,ETH-USD,SOL-USD"
 )
 
 analyze_btn = st.sidebar.button("📊 Phân tích")
 
 # =========================
-# 📊 LẤY DỮ LIỆU (Yahoo)
+# DATA
 # =========================
 def get_data(symbol):
     try:
@@ -34,19 +31,16 @@ def get_data(symbol):
         data = requests.get(url, headers=headers, timeout=10).json()
 
         prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
-        df = pd.DataFrame(prices, columns=["price"])
-        df = df.dropna()
+        df = pd.DataFrame(prices, columns=["price"]).dropna()
 
-        price_now = df.iloc[-1]['price']
-
-        return df, price_now
+        return df, df.iloc[-1]['price']
     except:
         return None, None
 
 # =========================
-# 📊 RSI
+# RSI
 # =========================
-def calculate_rsi(df):
+def rsi(df):
     delta = df['price'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
@@ -54,77 +48,106 @@ def calculate_rsi(df):
     return 100 - (100 / (1 + rs))
 
 # =========================
-# 🧠 PHÂN TÍCH
+# ANALYZE
 # =========================
 def analyze(df):
     df['MA7'] = df['price'].rolling(7).mean()
     df['MA30'] = df['price'].rolling(30).mean()
     df['MA100'] = df['price'].rolling(100).mean()
-    df['RSI'] = calculate_rsi(df)
+    df['RSI'] = rsi(df)
 
     latest = df.iloc[-1]
 
     score = 50
-    notes = []
-
     if latest['MA7'] > latest['MA30']:
         score += 15
-        notes.append("Xu hướng ngắn hạn tăng")
     else:
         score -= 15
-        notes.append("Xu hướng ngắn hạn giảm")
 
     if latest['price'] > latest['MA100']:
         score += 10
-        notes.append("Trend dài hạn tốt")
     else:
         score -= 10
-        notes.append("Trend dài hạn yếu")
 
     if latest['RSI'] < 30:
         score += 15
-        notes.append("Quá bán (có thể bật)")
     elif latest['RSI'] > 70:
         score -= 15
-        notes.append("Quá mua (dễ giảm)")
 
     if score >= 70:
-        decision = "📈 NÊN MUA"
+        decision = "📈 MUA"
     elif score <= 40:
-        decision = "📉 NÊN TRÁNH"
+        decision = "📉 TRÁNH"
     else:
-        decision = "⏳ NÊN CHỜ"
+        decision = "⏳ CHỜ"
 
-    return df, latest, score, decision, notes
+    return df, latest, score, decision
 
 # =========================
-# 🔘 PHÂN TÍCH
+# MAIN
 # =========================
 if analyze_btn:
-    symbol = symbol_input.strip().upper()
 
+    # --- PHÂN TÍCH CHÍNH ---
     df, price = get_data(symbol)
 
     if df is not None:
-        st.success(f"💰 {symbol} hiện tại: {round(price,2)}")
+        df, latest, score, decision = analyze(df)
 
-        df, latest, score, decision, notes = analyze(df)
+        st.subheader(f"📊 {symbol}")
+        st.write(f"💰 Giá: {round(price,2)}")
+        st.write(f"🎯 Điểm: {score}")
+        st.write(f"📌 {decision}")
 
-        col1, col2 = st.columns(2)
+        # 🔔 RSI ALERT
+        if latest['RSI'] < 30:
+            st.warning("⚠️ QUÁ BÁN (có thể bật)")
+        elif latest['RSI'] > 70:
+            st.warning("⚠️ QUÁ MUA (dễ giảm)")
 
-        with col1:
-            st.subheader("📊 Kết quả")
-            st.write(f"🎯 Điểm: {score}/100")
-            st.write(f"📌 {decision}")
-            st.write(f"RSI: {round(latest['RSI'],2)}")
-
-        with col2:
-            st.subheader("🧠 Nhận định")
-            for n in notes:
-                st.write(f"- {n}")
-
-        st.subheader("📈 Biểu đồ")
         st.line_chart(df[['price','MA7','MA30','MA100']])
 
-    else:
-        st.error("❌ Không lấy được dữ liệu (kiểm tra mã)")
+    # =========================
+    # ⚖️ SO SÁNH
+    # =========================
+    if symbol2:
+        df2, price2 = get_data(symbol2)
+
+        if df2 is not None:
+            _, latest2, score2, decision2 = analyze(df2)
+
+            st.subheader("⚖️ So sánh")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write(f"{symbol}: {score}")
+
+            with col2:
+                st.write(f"{symbol2}: {score2}")
+
+            if score > score2:
+                st.success(f"👉 {symbol} mạnh hơn")
+            else:
+                st.success(f"👉 {symbol2} mạnh hơn")
+
+    # =========================
+    # 🪙 SCAN COIN
+    # =========================
+    st.subheader("🪙 Săn kèo")
+
+    symbols = [s.strip().upper() for s in scan_list.split(",")]
+
+    results = []
+
+    for s in symbols:
+        df_s, _ = get_data(s)
+        if df_s is not None:
+            _, latest_s, score_s, _ = analyze(df_s)
+            results.append((s, score_s, latest_s['RSI']))
+
+    if results:
+        best = sorted(results, key=lambda x: x[1], reverse=True)
+
+        st.write("🔥 Top cơ hội:")
+        for r in best:
+            st.write(f"{r[0]} | Điểm: {r[1]} | RSI: {round(r[2],2)}")
