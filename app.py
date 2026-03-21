@@ -31,7 +31,15 @@ def get_gold_history():
 # 🪙 BITCOIN (FIX FULL)
 # =========================
 def get_btc_price():
-    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?range=1d&interval=1m"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        data = requests.get(url, headers=headers, timeout=10).json()
+
+        price = data['chart']['result'][0]['meta']['regularMarketPrice']
+        return float(price)
+    except:
+        return None
 
     # Binance
     try:
@@ -50,8 +58,16 @@ def get_btc_price():
         return None
 
 def get_btc_history():
-    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?range=1y&interval=1d"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        data = requests.get(url, headers=headers, timeout=10).json()
 
+        prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
+        df = pd.DataFrame(prices, columns=["price"])
+        return df.dropna()
+    except:
+        return None
     # Binance
     try:
         url = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=365"
