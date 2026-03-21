@@ -9,7 +9,11 @@ st.title("📱 Phân tích Vàng - Crypto - Kim loại")
 # =========================
 # 📥 INPUT
 # =========================
-symbol = st.text_input("Nhập mã tài sản (ví dụ: BTC-USD, ETH-USD, GC=F, SI=F)", "BTC-USD")
+symbol = st.text_input(
+    "Nhập mã tài sản (ví dụ: BTC-USD, ETH-USD, GC=F)",
+    value="BTC-USD",
+    key="input_symbol"
+)
 
 # =========================
 # 📊 LẤY DỮ LIỆU (Yahoo)
@@ -87,7 +91,7 @@ def analyze(df):
 # =========================
 # 🔘 NÚT PHÂN TÍCH
 # =========================
-if st.button("📊 Phân tích"):
+if st.button("📊 Phân tích", key="analyze_btn"):
     df, price = get_data(symbol)
 
     if df is not None:
