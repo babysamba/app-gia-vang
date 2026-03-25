@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 from datetime import datetime
 import pytz
-
+import re
 vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).strftime("%d/%m/%Y %H:%M:%S")
 st.caption(f"🕒 Giờ VN: {vn_time}")
 st.set_page_config(page_title="AI Phân tích thị trường", layout="centered")
@@ -25,7 +25,27 @@ def get_data(symbol):
         return df, df.iloc[-1]['price']
     except:
         return None, None
+# LẤY GIÁ VÀNG NHẪN TỪ SJC, DOJI VÀ PNJ
+def get_sjc_gold():
+    try:
+        url = "https://sjc.com.vn/giavang/textContent.php"
+        data = requests.get(url, timeout=10).text
 
+        # tìm dòng vàng nhẫn
+        lines = data.split("\n")
+
+        for line in lines:
+            if "Nhẫn" in line or "NHẪN" in line:
+                numbers = re.findall(r"\d+\.\d+", line)
+
+                if len(numbers) >= 2:
+                    buy = numbers[0]
+                    sell = numbers[1]
+                    return buy, sell
+
+        return None, None
+    except:
+        return None, None
 # =========================
 # 📊 RSI
 # =========================
@@ -89,7 +109,13 @@ def show_result(name, symbol):
     else:
         st.error("❌ Lỗi dữ liệu")
         return None, None
+#PHÂN  GIÁ VÀNG VN
+buy, sell = get_sjc_gold()
 
+if buy and sell:
+    st.info(f"🇻🇳 SJC Nhẫn: Mua {buy} - Bán {sell} triệu/lượng")
+else:
+    st.warning("Không lấy được giá SJC")
 # =========================
 # 🔘 NÚT
 # =========================
