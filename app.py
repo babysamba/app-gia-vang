@@ -46,7 +46,7 @@ def get_sjc_gold():
         return None, None
     except:
         return None, None
-        def get_doji_gold():
+  def get_doji_gold():
             try:
                 url = "https://giavang.doji.vn/"
                 headers = {"User-Agent": "Mozilla/5.0"}
@@ -79,7 +79,7 @@ def get_sjc_gold():
         
                 return None, None
             except:
-                return None, None
+                return None, None 
 # =========================
 # 📊 RSI
 # =========================
