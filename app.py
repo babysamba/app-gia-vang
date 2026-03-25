@@ -4,14 +4,19 @@ import requests
 from datetime import datetime
 import pytz
 import re
+
+st.set_page_config(page_title="AI Phân tích thị trường", layout="centered")
+
+# =========================
+# 🕒 GIỜ VN
+# =========================
 vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).strftime("%d/%m/%Y %H:%M:%S")
 st.caption(f"🕒 Giờ VN: {vn_time}")
-st.set_page_config(page_title="AI Phân tích thị trường", layout="centered")
 
 st.title("📊 AI Phân tích Vàng - Dầu - Bitcoin")
 
 # =========================
-# 📊 LẤY DỮ LIỆU (3 NĂM)
+# 📊 DATA (3 NĂM)
 # =========================
 def get_data(symbol):
     try:
@@ -25,61 +30,60 @@ def get_data(symbol):
         return df, df.iloc[-1]['price']
     except:
         return None, None
-# LẤY GIÁ VÀNG NHẪN TỪ SJC, DOJI VÀ PNJ
+
+# =========================
+# 🇻🇳 SJC
+# =========================
 def get_sjc_gold():
     try:
         url = "https://sjc.com.vn/giavang/textContent.php"
         data = requests.get(url, timeout=10).text
 
-        # tìm dòng vàng nhẫn
         lines = data.split("\n")
-
         for line in lines:
             if "Nhẫn" in line or "NHẪN" in line:
                 numbers = re.findall(r"\d+\.\d+", line)
-
                 if len(numbers) >= 2:
-                    buy = numbers[0]
-                    sell = numbers[1]
-                    return buy, sell
+                    return numbers[0], numbers[1]
 
         return None, None
     except:
         return None, None
-  def get_doji_gold():
-            try:
-                url = "https://giavang.doji.vn/"
-                headers = {"User-Agent": "Mozilla/5.0"}
-                data = requests.get(url, headers=headers, timeout=10).text
-        
-                import re
-                numbers = re.findall(r"\d{2},\d{3}", data)
-        
-                if len(numbers) >= 2:
-                    buy = numbers[0].replace(",", "")
-                    sell = numbers[1].replace(",", "")
-                    return buy, sell
 
-                return None, None
-            except:
-                return None, None
-        def get_pnj_gold():
-            try:
-                url = "https://giavang.pnj.com.vn/"
-                headers = {"User-Agent": "Mozilla/5.0"}
-                data = requests.get(url, headers=headers, timeout=10).text
-        
-                import re
-                numbers = re.findall(r"\d{3},\d{3}", data)
-        
-                if len(numbers) >= 2:
-                    buy = numbers[0].replace(",", "")
-                    sell = numbers[1].replace(",", "")
-                    return buy, sell
-        
-                return None, None
-            except:
-                return None, None 
+# =========================
+# 🇻🇳 DOJI
+# =========================
+def get_doji_gold():
+    try:
+        url = "https://giavang.doji.vn/"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        data = requests.get(url, headers=headers, timeout=10).text
+
+        numbers = re.findall(r"\d{2},\d{3}", data)
+        if len(numbers) >= 2:
+            return numbers[0].replace(",", ""), numbers[1].replace(",", "")
+
+        return None, None
+    except:
+        return None, None
+
+# =========================
+# 🇻🇳 PNJ
+# =========================
+def get_pnj_gold():
+    try:
+        url = "https://giavang.pnj.com.vn/"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        data = requests.get(url, headers=headers, timeout=10).text
+
+        numbers = re.findall(r"\d{3},\d{3}", data)
+        if len(numbers) >= 2:
+            return numbers[0].replace(",", ""), numbers[1].replace(",", "")
+
+        return None, None
+    except:
+        return None, None
+
 # =========================
 # 📊 RSI
 # =========================
@@ -101,7 +105,6 @@ def analyze(df):
 
     latest = df.iloc[-1]
 
-    # --- QUYẾT ĐỊNH ---
     if latest['MA7'] > latest['MA30'] and latest['RSI'] < 70:
         decision = "📈 MUA"
     elif latest['MA7'] < latest['MA30'] and latest['RSI'] > 30:
@@ -112,7 +115,7 @@ def analyze(df):
     return df, latest, decision
 
 # =========================
-# 📊 HIỂN THỊ
+# 🇻🇳 HIỂN THỊ GIÁ VN
 # =========================
 st.subheader("🇻🇳 Giá vàng Việt Nam")
 
@@ -128,6 +131,20 @@ if doji_buy:
 
 if pnj_buy:
     st.write(f"PNJ: {pnj_buy} - {pnj_sell}")
+
+# 🔥 chọn nơi rẻ nhất
+prices = {
+    "SJC": float(sjc_sell) if sjc_sell else 9999,
+    "DOJI": float(doji_sell) if doji_sell else 9999,
+    "PNJ": float(pnj_sell) if pnj_sell else 9999
+}
+
+best = min(prices, key=prices.get)
+st.success(f"🔥 Nên mua ở: {best}")
+
+# =========================
+# 📊 HIỂN THỊ
+# =========================
 def show_result(name, symbol):
     df, price = get_data(symbol)
 
@@ -144,7 +161,6 @@ def show_result(name, symbol):
 
         st.write(f"📌 Kết luận: {decision}")
 
-        # 🔔 CẢNH BÁO
         if latest['RSI'] < 30:
             st.warning("⚠️ QUÁ BÁN → chuẩn bị bật")
         elif latest['RSI'] > 70:
@@ -152,18 +168,12 @@ def show_result(name, symbol):
 
         st.line_chart(df[['price','MA7','MA30','MA100']])
 
-        return decision, latest['RSI']
+        return decision
 
     else:
         st.error("❌ Lỗi dữ liệu")
-        return None, None
-#PHÂN  GIÁ VÀNG VN
-buy, sell = get_sjc_gold()
+        return None
 
-if buy and sell:
-    st.info(f"🇻🇳 SJC Nhẫn: Mua {buy} - Bán {sell} triệu/lượng")
-else:
-    st.warning("Không lấy được giá SJC")
 # =========================
 # 🔘 NÚT
 # =========================
@@ -173,15 +183,15 @@ gold_decision = oil_decision = btc_decision = None
 
 with col1:
     if st.button("🟡 Vàng"):
-        gold_decision, gold_rsi = show_result("VÀNG (GC=F)", "GC=F")
+        gold_decision = show_result("VÀNG (GC=F)", "GC=F")
 
 with col2:
     if st.button("🛢️ Dầu"):
-        oil_decision, oil_rsi = show_result("DẦU (CL=F)", "CL=F")
+        oil_decision = show_result("DẦU (CL=F)", "CL=F")
 
 with col3:
     if st.button("🪙 Bitcoin"):
-        btc_decision, btc_rsi = show_result("BITCOIN (BTC-USD)", "BTC-USD")
+        btc_decision = show_result("BITCOIN (BTC-USD)", "BTC-USD")
 
 # =========================
 # ⚖️ SO SÁNH
@@ -200,12 +210,11 @@ if gold_decision or oil_decision or btc_decision:
         if v:
             st.write(f"{k}: {v}")
 
-    # 🔥 tìm cơ hội
-    buy_candidates = [k for k, v in results.items() if v == "📈 MUA"]
-    sell_candidates = [k for k, v in results.items() if v == "📉 BÁN"]
+    buy = [k for k, v in results.items() if v == "📈 MUA"]
+    sell = [k for k, v in results.items() if v == "📉 BÁN"]
 
-    if buy_candidates:
-        st.success(f"🔥 NÊN CHÚ Ý MUA: {', '.join(buy_candidates)}")
+    if buy:
+        st.success(f"🔥 NÊN MUA: {', '.join(buy)}")
 
-    if sell_candidates:
-        st.error(f"⚠️ ĐANG YẾU (CÓ THỂ BÁN): {', '.join(sell_candidates)}")
+    if sell:
+        st.error(f"⚠️ NÊN TRÁNH: {', '.join(sell)}")
