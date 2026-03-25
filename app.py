@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz
 import re
 
-st.set_page_config(page_title="AI MARKET", layout="centered")
+st.set_page_config(page_title="AI MARKET PRO", layout="centered")
 
 # =========================
 # TIME
@@ -13,7 +13,7 @@ st.set_page_config(page_title="AI MARKET", layout="centered")
 vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).strftime("%d/%m/%Y %H:%M:%S")
 st.caption(f"🕒 {vn_time}")
 
-st.title("📊 Phân tích Vàng - Dầu - BTC (KHÔNG RSI)")
+st.title("📊 AI Phân tích Vàng - Dầu - BTC (FULL)")
 
 # =========================
 # GOLD VN (VIEW ONLY)
@@ -86,12 +86,23 @@ def get_data(symbol):
         return None, None
 
 # =========================
-# ANALYZE (NO RSI)
+# RSI
+# =========================
+def calc_rsi(df):
+    delta = df['price'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+
+# =========================
+# ANALYZE
 # =========================
 def analyze(df):
     df['MA7'] = df['price'].rolling(7).mean()
     df['MA30'] = df['price'].rolling(30).mean()
     df['MA100'] = df['price'].rolling(100).mean()
+    df['RSI'] = calc_rsi(df)
 
     latest = df.iloc[-1]
 
@@ -107,16 +118,26 @@ def analyze(df):
     else:
         notes.append("Giá < MA100 → xu hướng dài hạn YẾU")
 
-    # decision
-    if latest['MA7'] > latest['MA30'] and latest['price'] > latest['MA100']:
+    if latest['RSI'] < 30:
+        notes.append("RSI < 30 → quá bán (có thể bật)")
+    elif latest['RSI'] > 70:
+        notes.append("RSI > 70 → quá mua (dễ giảm)")
+
+    # DECISION
+    if latest['MA7'] > latest['MA30'] and latest['price'] > latest['MA100'] and latest['RSI'] < 70:
         decision = "📈 MUA"
-        comment = "🚀 Xu hướng tăng rõ cả ngắn và dài hạn"
-    elif latest['MA7'] < latest['MA30'] and latest['price'] < latest['MA100']:
+    elif latest['MA7'] < latest['MA30'] and latest['price'] < latest['MA100'] and latest['RSI'] > 30:
         decision = "📉 BÁN"
-        comment = "📉 Xu hướng giảm rõ ràng"
     else:
         decision = "⏳ CHỜ"
-        comment = "⚠️ Thị trường chưa rõ xu hướng"
+
+    # COMMENT
+    if latest['RSI'] < 30:
+        comment = "⚠️ Đang giảm nhưng quá bán → có thể hồi kỹ thuật"
+    elif latest['MA7'] > latest['MA30']:
+        comment = "🚀 Xu hướng tăng rõ"
+    else:
+        comment = "📉 Xu hướng yếu → nên chờ"
 
     return df, latest, decision, notes, comment
 
@@ -127,7 +148,7 @@ def show(name, symbol):
     df, price = get_data(symbol)
 
     if df is None:
-        st.error("❌ Lỗi dữ liệu")
+        st.error("❌ Không lấy được dữ liệu")
         return None
 
     df, latest, decision, notes, comment = analyze(df)
@@ -135,6 +156,7 @@ def show(name, symbol):
     st.subheader(name)
     st.write(f"💰 Giá: {round(price,2)}")
     st.write(f"📌 {decision}")
+    st.write(f"📊 RSI: {round(latest['RSI'],2)}")
     st.info(comment)
 
     for n in notes:
