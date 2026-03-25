@@ -47,7 +47,7 @@ def get_sjc_gold():
     except:
         return None, None
         def get_doji_gold():
-    try:
+            try:
         url = "https://giavang.doji.vn/"
         headers = {"User-Agent": "Mozilla/5.0"}
         data = requests.get(url, headers=headers, timeout=10).text
@@ -64,7 +64,7 @@ def get_sjc_gold():
     except:
         return None, None
         def get_pnj_gold():
-    try:
+            try:
         url = "https://giavang.pnj.com.vn/"
         headers = {"User-Agent": "Mozilla/5.0"}
         data = requests.get(url, headers=headers, timeout=10).text
