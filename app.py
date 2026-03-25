@@ -61,8 +61,8 @@ def get_sjc_gold():
                     return buy, sell
 
                 return None, None
-    except:
-        return None, None
+            except:
+                return None, None
         def get_pnj_gold():
             try:
         url = "https://giavang.pnj.com.vn/"
