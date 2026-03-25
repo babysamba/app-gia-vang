@@ -60,7 +60,7 @@ def get_sjc_gold():
                     sell = numbers[1].replace(",", "")
                     return buy, sell
 
-        return None, None
+                return None, None
     except:
         return None, None
         def get_pnj_gold():
