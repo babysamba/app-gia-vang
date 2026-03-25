@@ -65,21 +65,21 @@ def get_sjc_gold():
                 return None, None
         def get_pnj_gold():
             try:
-        url = "https://giavang.pnj.com.vn/"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        data = requests.get(url, headers=headers, timeout=10).text
-
-        import re
-        numbers = re.findall(r"\d{3},\d{3}", data)
-
-        if len(numbers) >= 2:
-            buy = numbers[0].replace(",", "")
-            sell = numbers[1].replace(",", "")
-            return buy, sell
-
-        return None, None
-    except:
-        return None, None
+                url = "https://giavang.pnj.com.vn/"
+                headers = {"User-Agent": "Mozilla/5.0"}
+                data = requests.get(url, headers=headers, timeout=10).text
+        
+                import re
+                numbers = re.findall(r"\d{3},\d{3}", data)
+        
+                if len(numbers) >= 2:
+                    buy = numbers[0].replace(",", "")
+                    sell = numbers[1].replace(",", "")
+                    return buy, sell
+        
+                return None, None
+            except:
+                return None, None
 # =========================
 # 📊 RSI
 # =========================
