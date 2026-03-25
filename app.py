@@ -8,15 +8,15 @@ import re
 st.set_page_config(page_title="AI MARKET", layout="centered")
 
 # =========================
-# 🕒 TIME
+# TIME
 # =========================
 vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).strftime("%d/%m/%Y %H:%M:%S")
 st.caption(f"🕒 {vn_time}")
 
-st.title("📊 AI Phân tích Vàng - Dầu - BTC")
+st.title("📊 Phân tích Vàng - Dầu - BTC (KHÔNG RSI)")
 
 # =========================
-# 🇻🇳 GOLD VN (VIEW ONLY)
+# GOLD VN (VIEW ONLY)
 # =========================
 def get_sjc():
     try:
@@ -61,13 +61,12 @@ if doji_s: st.write(f"DOJI: {doji_b} - {doji_s}")
 if pnj_s: st.write(f"PNJ: {pnj_b} - {pnj_s}")
 
 # =========================
-# 🌍 DATA SAFE (FIX LỖI)
+# DATA SAFE
 # =========================
 def get_data(symbol):
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=3y&interval=1d"
         headers = {"User-Agent": "Mozilla/5.0"}
-
         res = requests.get(url, headers=headers, timeout=10)
 
         if res.status_code != 200:
@@ -79,11 +78,7 @@ def get_data(symbol):
             return None, None
 
         prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
-
         df = pd.DataFrame(prices, columns=["price"]).dropna()
-
-        if df.empty:
-            return None, None
 
         return df, df.iloc[-1]['price']
 
@@ -91,56 +86,37 @@ def get_data(symbol):
         return None, None
 
 # =========================
-# RSI
-# =========================
-def rsi(df):
-    delta = df['price'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
-
-# =========================
-# ANALYZE
+# ANALYZE (NO RSI)
 # =========================
 def analyze(df):
     df['MA7'] = df['price'].rolling(7).mean()
     df['MA30'] = df['price'].rolling(30).mean()
     df['MA100'] = df['price'].rolling(100).mean()
-    df['RSI'] = rsi(df)
 
     latest = df.iloc[-1]
 
     notes = []
 
     if latest['MA7'] > latest['MA30']:
-        notes.append("MA7 > MA30 → xu hướng TĂNG")
+        notes.append("MA7 > MA30 → xu hướng ngắn hạn TĂNG")
     else:
-        notes.append("MA7 < MA30 → xu hướng GIẢM")
+        notes.append("MA7 < MA30 → xu hướng ngắn hạn GIẢM")
 
     if latest['price'] > latest['MA100']:
-        notes.append("Giá > MA100 → dài hạn TỐT")
+        notes.append("Giá > MA100 → xu hướng dài hạn TỐT")
     else:
-        notes.append("Giá < MA100 → dài hạn YẾU")
+        notes.append("Giá < MA100 → xu hướng dài hạn YẾU")
 
-    if latest['RSI'] < 30:
-        notes.append("RSI < 30 → quá bán")
-    elif latest['RSI'] > 70:
-        notes.append("RSI > 70 → quá mua")
-
-    if latest['MA7'] > latest['MA30'] and latest['RSI'] < 70:
+    # decision
+    if latest['MA7'] > latest['MA30'] and latest['price'] > latest['MA100']:
         decision = "📈 MUA"
-    elif latest['MA7'] < latest['MA30'] and latest['RSI'] > 30:
+        comment = "🚀 Xu hướng tăng rõ cả ngắn và dài hạn"
+    elif latest['MA7'] < latest['MA30'] and latest['price'] < latest['MA100']:
         decision = "📉 BÁN"
+        comment = "📉 Xu hướng giảm rõ ràng"
     else:
         decision = "⏳ CHỜ"
-
-    if latest['RSI'] < 30:
-        comment = "⚠️ Giảm mạnh nhưng quá bán → có thể hồi"
-    elif latest['MA7'] > latest['MA30']:
-        comment = "🚀 Xu hướng tăng rõ"
-    else:
-        comment = "📉 Xu hướng yếu → nên chờ"
+        comment = "⚠️ Thị trường chưa rõ xu hướng"
 
     return df, latest, decision, notes, comment
 
@@ -151,7 +127,7 @@ def show(name, symbol):
     df, price = get_data(symbol)
 
     if df is None:
-        st.error("❌ Không lấy được dữ liệu (Yahoo lỗi)")
+        st.error("❌ Lỗi dữ liệu")
         return None
 
     df, latest, decision, notes, comment = analyze(df)
@@ -195,14 +171,15 @@ if gold or oil or btc:
 
     results = {"Vàng": gold, "Dầu": oil, "BTC": btc}
 
-    for k,v in results.items():
+    for k, v in results.items():
         if v:
             st.write(f"{k}: {v}")
 
-    buy = [k for k,v in results.items() if v=="📈 MUA"]
-    sell = [k for k,v in results.items() if v=="📉 BÁN"]
+    buy = [k for k, v in results.items() if v == "📈 MUA"]
+    sell = [k for k, v in results.items() if v == "📉 BÁN"]
 
     if buy:
         st.success(f"🔥 NÊN MUA: {', '.join(buy)}")
+
     if sell:
         st.error(f"⚠️ NÊN TRÁNH: {', '.join(sell)}")
