@@ -20,7 +20,7 @@ st.title("📊 AI Phân tích Vàng - Dầu - BTC")
 # =========================
 def get_sjc():
     try:
-        data = requests.get("https://sjc.com.vn/giavang/textContent.php").text
+        data = requests.get("https://sjc.com.vn/giavang/textContent.php", timeout=10).text
         for line in data.split("\n"):
             if "Nhẫn" in line:
                 nums = re.findall(r"\d+\.\d+", line)
@@ -32,7 +32,7 @@ def get_sjc():
 
 def get_doji():
     try:
-        data = requests.get("https://giavang.doji.vn/").text
+        data = requests.get("https://giavang.doji.vn/", timeout=10).text
         nums = re.findall(r"\d{2},\d{3}", data)
         if len(nums) >= 2:
             return nums[0].replace(",", ""), nums[1].replace(",", "")
@@ -42,7 +42,7 @@ def get_doji():
 
 def get_pnj():
     try:
-        data = requests.get("https://giavang.pnj.com.vn/").text
+        data = requests.get("https://giavang.pnj.com.vn/", timeout=10).text
         nums = re.findall(r"\d{3},\d{3}", data)
         if len(nums) >= 2:
             return nums[0].replace(",", ""), nums[1].replace(",", "")
@@ -61,14 +61,34 @@ if doji_s: st.write(f"DOJI: {doji_b} - {doji_s}")
 if pnj_s: st.write(f"PNJ: {pnj_b} - {pnj_s}")
 
 # =========================
-# 🌍 DATA
+# 🌍 DATA SAFE (FIX LỖI)
 # =========================
 def get_data(symbol):
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=3y&interval=1d"
-    data = requests.get(url).json()
-    prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
-    df = pd.DataFrame(prices, columns=["price"]).dropna()
-    return df, df.iloc[-1]['price']
+    try:
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=3y&interval=1d"
+        headers = {"User-Agent": "Mozilla/5.0"}
+
+        res = requests.get(url, headers=headers, timeout=10)
+
+        if res.status_code != 200:
+            return None, None
+
+        data = res.json()
+
+        if not data.get('chart') or not data['chart'].get('result'):
+            return None, None
+
+        prices = data['chart']['result'][0]['indicators']['quote'][0]['close']
+
+        df = pd.DataFrame(prices, columns=["price"]).dropna()
+
+        if df.empty:
+            return None, None
+
+        return df, df.iloc[-1]['price']
+
+    except:
+        return None, None
 
 # =========================
 # RSI
@@ -129,6 +149,11 @@ def analyze(df):
 # =========================
 def show(name, symbol):
     df, price = get_data(symbol)
+
+    if df is None:
+        st.error("❌ Không lấy được dữ liệu (Yahoo lỗi)")
+        return None
+
     df, latest, decision, notes, comment = analyze(df)
 
     st.subheader(name)
