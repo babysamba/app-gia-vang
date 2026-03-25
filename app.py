@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz
 import re
 
-st.set_page_config(page_title="AI Phân tích thị trường", layout="centered")
+st.set_page_config(page_title="AI PRO MAX", layout="centered")
 
 # =========================
 # 🕒 GIỜ VN
@@ -13,10 +13,10 @@ st.set_page_config(page_title="AI Phân tích thị trường", layout="centered
 vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).strftime("%d/%m/%Y %H:%M:%S")
 st.caption(f"🕒 Giờ VN: {vn_time}")
 
-st.title("📊 AI Phân tích Vàng - Dầu - Bitcoin")
+st.title("📊 AI Săn kèo Vàng VN - Dầu - Bitcoin")
 
 # =========================
-# 📊 DATA (3 NĂM)
+# 📊 DATA THẾ GIỚI
 # =========================
 def get_data(symbol):
     try:
@@ -39,13 +39,11 @@ def get_sjc_gold():
         url = "https://sjc.com.vn/giavang/textContent.php"
         data = requests.get(url, timeout=10).text
 
-        lines = data.split("\n")
-        for line in lines:
-            if "Nhẫn" in line or "NHẪN" in line:
+        for line in data.split("\n"):
+            if "Nhẫn" in line:
                 numbers = re.findall(r"\d+\.\d+", line)
                 if len(numbers) >= 2:
                     return numbers[0], numbers[1]
-
         return None, None
     except:
         return None, None
@@ -62,7 +60,6 @@ def get_doji_gold():
         numbers = re.findall(r"\d{2},\d{3}", data)
         if len(numbers) >= 2:
             return numbers[0].replace(",", ""), numbers[1].replace(",", "")
-
         return None, None
     except:
         return None, None
@@ -79,10 +76,28 @@ def get_pnj_gold():
         numbers = re.findall(r"\d{3},\d{3}", data)
         if len(numbers) >= 2:
             return numbers[0].replace(",", ""), numbers[1].replace(",", "")
-
         return None, None
     except:
         return None, None
+
+# =========================
+# 🇻🇳 GIÁ TRUNG BÌNH VN
+# =========================
+def get_vn_gold_price():
+    sjc_buy, sjc_sell = get_sjc_gold()
+    doji_buy, doji_sell = get_doji_gold()
+    pnj_buy, pnj_sell = get_pnj_gold()
+
+    prices = []
+
+    for p in [sjc_sell, doji_sell, pnj_sell]:
+        if p:
+            prices.append(float(p))
+
+    if len(prices) > 0:
+        return sum(prices) / len(prices), prices
+    else:
+        return None, []
 
 # =========================
 # 📊 RSI
@@ -95,7 +110,7 @@ def calculate_rsi(df):
     return 100 - (100 / (1 + rs))
 
 # =========================
-# 🧠 PHÂN TÍCH
+# 🧠 AI PHÂN TÍCH
 # =========================
 def analyze(df):
     df['MA7'] = df['price'].rolling(7).mean()
@@ -105,71 +120,110 @@ def analyze(df):
 
     latest = df.iloc[-1]
 
-    if latest['MA7'] > latest['MA30'] and latest['RSI'] < 70:
+    score = 50
+    notes = []
+
+    if latest['MA7'] > latest['MA30']:
+        score += 15
+        notes.append("MA7 > MA30 → xu hướng tăng")
+    else:
+        score -= 15
+        notes.append("MA7 < MA30 → xu hướng giảm")
+
+    if latest['price'] > latest['MA100']:
+        score += 10
+        notes.append("Giá trên MA100 → dài hạn tốt")
+    else:
+        score -= 10
+        notes.append("Giá dưới MA100 → dài hạn yếu")
+
+    if latest['RSI'] < 30:
+        score += 15
+        notes.append("RSI < 30 → quá bán")
+    elif latest['RSI'] > 70:
+        score -= 15
+        notes.append("RSI > 70 → quá mua")
+
+    if score >= 70:
         decision = "📈 MUA"
-    elif latest['MA7'] < latest['MA30'] and latest['RSI'] > 30:
+    elif score <= 40:
         decision = "📉 BÁN"
     else:
         decision = "⏳ CHỜ"
 
-    return df, latest, decision
+    if latest['RSI'] < 30 and latest['MA7'] < latest['MA30']:
+        comment = "⚠️ Đang giảm nhưng quá bán → có thể hồi"
+    elif latest['MA7'] > latest['MA30']:
+        comment = "🚀 Xu hướng tăng rõ"
+    else:
+        comment = "📉 Xu hướng yếu → thận trọng"
+
+    return df, latest, decision, notes, score, comment
 
 # =========================
-# 🇻🇳 HIỂN THỊ GIÁ VN
+# 🇻🇳 HIỂN THỊ VÀNG VN
 # =========================
-st.subheader("🇻🇳 Giá vàng Việt Nam")
+def show_gold_vn():
+    avg_price, prices = get_vn_gold_price()
 
-sjc_buy, sjc_sell = get_sjc_gold()
-doji_buy, doji_sell = get_doji_gold()
-pnj_buy, pnj_sell = get_pnj_gold()
+    sjc_buy, sjc_sell = get_sjc_gold()
+    doji_buy, doji_sell = get_doji_gold()
+    pnj_buy, pnj_sell = get_pnj_gold()
 
-if sjc_buy:
-    st.write(f"SJC: {sjc_buy} - {sjc_sell}")
+    st.subheader("🇻🇳 Vàng nhẫn Việt Nam")
 
-if doji_buy:
-    st.write(f"DOJI: {doji_buy} - {doji_sell}")
+    if sjc_buy:
+        st.write(f"SJC: {sjc_buy} - {sjc_sell}")
+    if doji_buy:
+        st.write(f"DOJI: {doji_buy} - {doji_sell}")
+    if pnj_buy:
+        st.write(f"PNJ: {pnj_buy} - {pnj_sell}")
 
-if pnj_buy:
-    st.write(f"PNJ: {pnj_buy} - {pnj_sell}")
+    if avg_price:
+        st.write(f"💰 Giá trung bình: {round(avg_price,2)} triệu")
 
-# 🔥 chọn nơi rẻ nhất
-prices = {
-    "SJC": float(sjc_sell) if sjc_sell else 9999,
-    "DOJI": float(doji_sell) if doji_sell else 9999,
-    "PNJ": float(pnj_sell) if pnj_sell else 9999
-}
+        spread = max(prices) - min(prices)
+        st.warning(f"⚠️ Chênh lệch: {round(spread,2)} triệu")
 
-best = min(prices, key=prices.get)
-st.success(f"🔥 Nên mua ở: {best}")
+        # tạo data giả để phân tích
+        df = pd.DataFrame([avg_price]*200, columns=["price"])
+
+        df, latest, decision, notes, score, comment = analyze(df)
+
+        st.write(f"📌 {decision}")
+        st.write(f"🎯 Điểm: {score}/100")
+        st.info(comment)
+
+        for n in notes:
+            st.write(f"- {n}")
+
+        return decision
+    else:
+        st.error("❌ Không lấy được giá VN")
+        return None
 
 # =========================
-# 📊 HIỂN THỊ
+# 📊 HIỂN THỊ KHÁC
 # =========================
 def show_result(name, symbol):
     df, price = get_data(symbol)
 
     if df is not None:
-        df, latest, decision = analyze(df)
+        df, latest, decision, notes, score, comment = analyze(df)
 
         st.subheader(name)
         st.write(f"💰 Giá: {round(price,2)}")
+        st.write(f"📌 {decision}")
+        st.write(f"🎯 Điểm: {score}/100")
 
-        st.write(f"MA7: {round(latest['MA7'],2)}")
-        st.write(f"MA30: {round(latest['MA30'],2)}")
-        st.write(f"MA100: {round(latest['MA100'],2)}")
-        st.write(f"RSI: {round(latest['RSI'],2)}")
+        st.info(comment)
 
-        st.write(f"📌 Kết luận: {decision}")
-
-        if latest['RSI'] < 30:
-            st.warning("⚠️ QUÁ BÁN → chuẩn bị bật")
-        elif latest['RSI'] > 70:
-            st.warning("⚠️ QUÁ MUA → dễ giảm")
+        for n in notes:
+            st.write(f"- {n}")
 
         st.line_chart(df[['price','MA7','MA30','MA100']])
 
         return decision
-
     else:
         st.error("❌ Lỗi dữ liệu")
         return None
@@ -182,28 +236,28 @@ col1, col2, col3 = st.columns(3)
 gold_decision = oil_decision = btc_decision = None
 
 with col1:
-    if st.button("🟡 Vàng"):
-        gold_decision = show_result("VÀNG (GC=F)", "GC=F")
+    if st.button("🟡 Vàng VN"):
+        gold_decision = show_gold_vn()
 
 with col2:
     if st.button("🛢️ Dầu"):
         oil_decision = show_result("DẦU (CL=F)", "CL=F")
 
 with col3:
-    if st.button("🪙 Bitcoin"):
-        btc_decision = show_result("BITCOIN (BTC-USD)", "BTC-USD")
+    if st.button("🪙 BTC"):
+        btc_decision = show_result("BTC", "BTC-USD")
 
 # =========================
 # ⚖️ SO SÁNH
 # =========================
 if gold_decision or oil_decision or btc_decision:
 
-    st.subheader("⚖️ So sánh thị trường")
+    st.subheader("⚖️ So sánh")
 
     results = {
-        "Vàng": gold_decision,
+        "Vàng VN": gold_decision,
         "Dầu": oil_decision,
-        "Bitcoin": btc_decision
+        "BTC": btc_decision
     }
 
     for k, v in results.items():
