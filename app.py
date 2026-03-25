@@ -46,6 +46,40 @@ def get_sjc_gold():
         return None, None
     except:
         return None, None
+        def get_doji_gold():
+    try:
+        url = "https://giavang.doji.vn/"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        data = requests.get(url, headers=headers, timeout=10).text
+
+        import re
+        numbers = re.findall(r"\d{2},\d{3}", data)
+
+        if len(numbers) >= 2:
+            buy = numbers[0].replace(",", "")
+            sell = numbers[1].replace(",", "")
+            return buy, sell
+
+        return None, None
+    except:
+        return None, None
+        def get_pnj_gold():
+    try:
+        url = "https://giavang.pnj.com.vn/"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        data = requests.get(url, headers=headers, timeout=10).text
+
+        import re
+        numbers = re.findall(r"\d{3},\d{3}", data)
+
+        if len(numbers) >= 2:
+            buy = numbers[0].replace(",", "")
+            sell = numbers[1].replace(",", "")
+            return buy, sell
+
+        return None, None
+    except:
+        return None, None
 # =========================
 # 📊 RSI
 # =========================
@@ -80,6 +114,20 @@ def analyze(df):
 # =========================
 # 📊 HIỂN THỊ
 # =========================
+st.subheader("🇻🇳 Giá vàng Việt Nam")
+
+sjc_buy, sjc_sell = get_sjc_gold()
+doji_buy, doji_sell = get_doji_gold()
+pnj_buy, pnj_sell = get_pnj_gold()
+
+if sjc_buy:
+    st.write(f"SJC: {sjc_buy} - {sjc_sell}")
+
+if doji_buy:
+    st.write(f"DOJI: {doji_buy} - {doji_sell}")
+
+if pnj_buy:
+    st.write(f"PNJ: {pnj_buy} - {pnj_sell}")
 def show_result(name, symbol):
     df, price = get_data(symbol)
 
