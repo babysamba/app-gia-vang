@@ -1,7 +1,11 @@
 import streamlit as st
 import pandas as pd
 import requests
+from datetime import datetime
+import pytz
 
+vn_time = datetime.now(pytz.timezone("Asia/Ho_Chi_Minh")).strftime("%d/%m/%Y %H:%M:%S")
+st.caption(f"🕒 Giờ VN: {vn_time}")
 st.set_page_config(page_title="AI Phân tích thị trường", layout="centered")
 
 st.title("📊 AI Phân tích Vàng - Dầu - Bitcoin")
